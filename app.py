@@ -29,7 +29,7 @@ try:
 except Exception:
     # Cấu hình dành cho khi chạy dưới máy cá nhân (Windows)
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        driver.get(url)
+    driver.get(url)
     
     # Đợi Facebook tải trang (có thể tăng thời gian nếu mạng chậm)
     time.sleep(5) 
