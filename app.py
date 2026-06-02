@@ -18,45 +18,30 @@ url = st.text_input("Dán đường link bài viết Fanpage chứa ảnh vào �
 def get_images_from_fb(url):
     """Sử dụng Selenium để giả lập trình duyệt và lấy link ảnh"""
     options = webdriver.ChromeOptions()
-    options.add_argument('--headless') # Chạy ngầm
+    options.add_argument('--headless') # Chạy ngầm, không mở cửa sổ trình duyệt
     options.add_argument('--disable-gpu')
     options.add_argument('--no-sandbox')
     
-    # 1. Thêm "mặt nạ" giả làm điện thoại iPhone để lách tường lửa đăng nhập
-    options.add_argument('--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1')
-    
-    # 2. Đổi link sang bản Mobile để web nhẹ và dễ trích xuất dữ liệu hơn
-    if "facebook.com" in url:
-         url = url.replace("www.facebook.com", "m.facebook.com")
-
     # Khởi tạo trình duyệt
-    try:
-        options.binary_location = "/usr/bin/chromium"
-        driver = webdriver.Chrome(options=options)
-    except Exception:
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     driver.get(url)
     
-    # 3. Tăng thời gian chờ lên 8 giây để vượt qua độ trễ mạng của máy chủ
-    time.sleep(8) 
+    # Đợi Facebook tải trang (có thể tăng thời gian nếu mạng chậm)
+    time.sleep(5) 
     
-    # 4. Trượt trang xuống dưới để Facebook ép tải các ảnh đang bị ẩn
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(3)
-    
-    # Thu thập ảnh
+    # Tìm các thẻ chứa hình ảnh (Lưu ý: Class của Facebook thường xuyên thay đổi)
+    # Đây là logic mẫu, bạn cần F12 trên FB để tìm thẻ img chính xác chứa tài liệu
     images = driver.find_elements(By.TAG_NAME, 'img')
     
     img_urls = []
     for img in images:
         src = img.get_attribute('src')
-        # Lọc lấy ảnh thật (chứa scontent)
-        if src and "scontent" in src:
+        if src and "scontent" in src: # Lọc các link ảnh thực tế của FB
             img_urls.append(src)
             
     driver.quit()
     return img_urls
+
 def create_pdf(img_urls):
     """Tải ảnh từ link và nối thành PDF"""
     image_list = []
@@ -64,6 +49,7 @@ def create_pdf(img_urls):
         try:
             response = requests.get(img_url)
             img = Image.open(BytesIO(response.content))
+            # Chuyển đổi sang hệ màu RGB để tránh lỗi khi lưu PDF
             if img.mode != 'RGB':
                 img = img.convert('RGB')
             image_list.append(img)
@@ -71,6 +57,7 @@ def create_pdf(img_urls):
             st.error(f"Lỗi tải ảnh: {e}")
             
     if image_list:
+        # Tạo file PDF trên bộ nhớ tạm
         pdf_bytes = BytesIO()
         image_list[0].save(pdf_bytes, format='PDF', save_all=True, append_images=image_list[1:])
         return pdf_bytes.getvalue()
@@ -94,6 +81,6 @@ if st.button("Tải xuống và Tạo PDF"):
                         mime="application/pdf"
                     )
             else:
-                st.warning("Không tìm thấy hình ảnh tài liệu nào. Bài viết có thể bị giới hạn quyền riêng tư.")
+                st.warning("Không tìm thấy hình ảnh tài liệu nào. Bài viết có thể bị giới hạn quyền riêng tư hoặc cấu trúc Facebook đã thay đổi.")
     else:
         st.error("Vui lòng nhập link bài viết Fanpage!")
