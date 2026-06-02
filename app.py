@@ -39,8 +39,8 @@ def get_images_from_fb(url):
         if src and "scontent" in src: # Lọc các link ảnh thực tế của FB
             img_urls.append(src)
             
-            driver.quit()
-            return img_urls
+    driver.quit()
+    return img_urls
 
 def create_pdf(img_urls):
     """Tải ảnh từ link và nối thành PDF"""
