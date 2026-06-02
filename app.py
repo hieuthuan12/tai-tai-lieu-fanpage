@@ -22,29 +22,41 @@ def get_images_from_fb(url):
     options.add_argument('--disable-gpu')
     options.add_argument('--no-sandbox')
     
-    # Khởi tạo trình duyệt (Tự động thích ứng máy cục bộ và Cloud)
+    # 1. Thêm "mặt nạ" giả làm điện thoại iPhone để lách tường lửa đăng nhập
+    options.add_argument('--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1')
+    
+    # 2. Đổi link sang bản Mobile để web nhẹ và dễ trích xuất dữ liệu hơn
+    if "facebook.com" in url:
+         url = url.replace("www.facebook.com", "m.facebook.com")
+
+    # Khởi tạo trình duyệt
     try:
-        # Cấu hình dành cho khi chạy trên Cloud (Linux)
         options.binary_location = "/usr/bin/chromium"
         driver = webdriver.Chrome(options=options)
     except Exception:
-        # Cấu hình dành cho khi chạy dưới máy cá nhân (Windows)
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         
     driver.get(url)
-    time.sleep(5) 
     
+    # 3. Tăng thời gian chờ lên 8 giây để vượt qua độ trễ mạng của máy chủ
+    time.sleep(8) 
+    
+    # 4. Trượt trang xuống dưới để Facebook ép tải các ảnh đang bị ẩn
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    time.sleep(3)
+    
+    # Thu thập ảnh
     images = driver.find_elements(By.TAG_NAME, 'img')
     
     img_urls = []
     for img in images:
         src = img.get_attribute('src')
+        # Lọc lấy ảnh thật (chứa scontent)
         if src and "scontent" in src:
             img_urls.append(src)
             
     driver.quit()
     return img_urls
-
 def create_pdf(img_urls):
     """Tải ảnh từ link và nối thành PDF"""
     image_list = []
